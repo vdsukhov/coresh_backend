@@ -30,8 +30,12 @@ def submit_genes(request):
             entrez_genes = genes2entrez(conv_gene_symbols, GPROF_ORGS[db_type])['converted'].dropna().to_list()
             pass
         else:
-            conv_df = genes2entrez(genes, GPROF_ORGS[org])
-            entrez_genes = conv_df['converted'].dropna().to_list()
+            if False in [elem.isdigit() for elem in genes]:
+                conv_df = genes2entrez(genes, GPROF_ORGS[org])
+                entrez_genes = conv_df['converted'].dropna().to_list()
+            else:
+                entrez_genes = genes
+                print('entrez_genes:', entrez_genes)
 
 
 
