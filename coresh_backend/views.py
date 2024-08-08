@@ -146,3 +146,38 @@ def get_final_table(request):
     
 
     return JsonResponse({'error': 'Get (get-final-table) request failed'}, status=405)
+
+
+
+def get_enriched_words(request):
+    jobid = request.GET.get('jobid')
+
+    tmp_f_path = None
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as tmp_f:
+        tmp_f_path = tmp_f.name
+        print(tmp_f_path)
+    
+    try:
+        p = subprocess.Popen(
+            ['python', './coresh_backend/runner/get_enriched_words.py',
+             '--server-path-suffix', jobid,
+             '--out-json-path', tmp_f_path
+             ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True
+        )
+
+        pout, perr = p.communicate()
+        assert p.returncode == 0, perr
+        
+
+        with open(tmp_f_path) as inp_f:
+            res = json.load(inp_f)
+        return JsonResponse(res, safe=False)
+    except Exception as e:
+        print(f'Error occured during the get_final_table: {e}')
+
+    
+
+    return JsonResponse({'error': 'Get (get-enriched-words) request failed'}, status=405)
