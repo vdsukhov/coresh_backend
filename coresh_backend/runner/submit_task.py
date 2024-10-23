@@ -22,12 +22,6 @@ def generate_random_folder_name():
     
     return folder_name
 
-# CORESH_R_PATH = "/nfs/home/geseca/geseca/geseca-r/"
-# OUT_PATH = "/mnt/tank/scratch/geseca/geseca-web/query"
-
-
-# SERVER_HOST = 'sphinx'
-# SERVER_USER = 'geseca'
 
 SERVER_HOST = os.getenv("SERVER_HOST")
 SERVER_USER = os.getenv("SERVER_USER")
@@ -55,10 +49,6 @@ def create_temp_dir():
         'mkdir', '-p', f'{OUT_PATH}/{rand_name}'
     ]
 
-    # ssh_command = [
-    #     'ssh', f'{SERVER_USER}@{SERVER_HOST}',
-    #     'mktemp', '-d', f'--tmpdir={OUT_PATH}'
-    # ]
     try:
         p = subprocess.Popen(
             ssh_command,
