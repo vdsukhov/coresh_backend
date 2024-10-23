@@ -22,6 +22,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path("submit-genes", views.submit_genes, name="submit_genes"),
     path('check-job', views.check_job_status, name="check_job"),
-    path('get-final-table', views.get_final_table, name="get_final_table"),
-    path('get-enriched-words', views.get_enriched_words, name="get_enriched_words")
+    path('create-final-tables', views.create_final_tables, name="create_final_tables"),
+    path('get-ranking-result', views.get_ranking_result, name="get_ranking_result"),
+    path('get-enriched-words', views.get_enriched_words, name="get_enriched_words"),
+    path('check-result-files', views.check_result_files, name="check_result_files")
 ]

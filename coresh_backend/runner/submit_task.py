@@ -86,10 +86,10 @@ def create_subfolders(dst):
         return False
 
 def upload_query_json(query_path, dst):
-    
     try:
         create_subfolders(dst)
-        subprocess.call(['rsync', '-qP', f'{query_path}', f'{SERVER_USER}@{SERVER_HOST}:{dst}/input/query.json'])
+        subprocess.call(['rsync', '-qP', f'{query_path}', f'{SERVER_USER}@{SERVER_HOST}:{dst}/input/query.json'],
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception as e:
         print(f"Error occured during upload_query_json: {e}")
 

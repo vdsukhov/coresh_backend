@@ -1,51 +1,35 @@
 #!/usr/bin/env python
 import argparse
 import subprocess
+import os
 
-GESECAR_PATH = "/nfs/home/geseca/geseca/geseca-r/"
-OUT_PATH = "/mnt/tank/scratch/geseca/geseca-web/query"
 
-SERVER_HOST = 'sphinx'
-SERVER_USER = 'geseca'
+SERVER_HOST = os.getenv("SERVER_HOST")
+SERVER_USER = os.getenv("SERVER_USER")
+CORESH_R_PATH = os.getenv("CORESH_R_PATH")
+OUT_PATH = os.getenv("CORESH_QUERIES")
 
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('--server-path-suffix', type=str, required=True, help='server path suffix')
-    parser.add_argument('--out-json-path', type=str, required=True, help='Output JSON path')
+    parser.add_argument('--words-path', type=str, required=True, 
+                    help='Path to a temporary file for storing the result of enriched words analysis')
     args = parser.parse_args()
     return args.server_path_suffix, args.out_json_path
 
 
 if __name__ == "__main__":
-    server_path_suffix, out_json_path = parse_arguments()
+    server_path_suffix, words_path = parse_arguments()
     print(f"SERVER_PATH_SUFFIX: {server_path_suffix}")
-    print(f"OUT_JSON_PATH: {out_json_path}")
-
-    COMMAND = f'source ~/.profile; cd {GESECAR_PATH}; Rscript GetTextAnalysis.R {server_path_suffix}'
-
-    ssh_command = [
-        "ssh",
-        f"{SERVER_USER}@{SERVER_HOST}",
-        f"{COMMAND}"
-    ]
-
+    print(f"OUT_WORDS_PATH: {words_path}")
+    
     try:
-        process = subprocess.Popen(
-            ssh_command, 
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True
-        )
-        output, error = process.communicate()
-
-        if process.returncode != 0:
-            print(f"Error: {error}")
-    except Exception as e:
-        print(f"An error occured: {e}")
-
-    try:
-        subprocess.call(['rsync', '-qP', f'{SERVER_USER}@{SERVER_HOST}:{OUT_PATH}/{server_path_suffix}/output/finalTable/words_enrichment.json', f'{out_json_path}'])
+        subprocess.call([
+            'rsync', '-qP', 
+            f'{SERVER_USER}@{SERVER_HOST}:{OUT_PATH}/{server_path_suffix}/output/finalTable/words_enrichment.json', 
+            f'{words_path}'
+            ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception as e:
         print(f"Error occured during rsync: {e}")
 

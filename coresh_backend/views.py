@@ -13,6 +13,10 @@ GPROF_ORGS = {
     'mmu': 'mmusculus'
 }
 
+SERVER_HOST = os.getenv("SERVER_HOST")
+SERVER_USER = os.getenv("SERVER_USER")
+CORESH_R_PATH = os.getenv("CORESH_R_PATH")
+OUT_PATH = os.getenv("CORESH_QUERIES")
 
 @csrf_exempt
 def submit_genes(request):
@@ -114,38 +118,32 @@ def check_job_status(request):
     return JsonResponse(response)
 
 
-def get_final_table(request):
+def create_final_tables(request):
     jobid = request.GET.get('jobid')
-
-    tmp_f_path = None
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as tmp_f:
-        tmp_f_path = tmp_f.name
-        print(tmp_f_path)
     
     try:
         p = subprocess.Popen(
-            ['python', './coresh_backend/runner/get_final_table.py',
-             '--server-path-suffix', jobid,
-             '--out-json-path', tmp_f_path
-             ],
+            ['python', './coresh_backend/runner/create_final_tables.py',
+             '--server-path-suffix', jobid],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             universal_newlines=True
         )
-
-        pout, perr = p.communicate()
-        assert p.returncode == 0, perr
         
-
-        with open(tmp_f_path) as inp_f:
-            res = json.load(inp_f)
-        return JsonResponse(res, safe=False)
+        pout, perr = p.communicate()
+                # Check for successful execution
+        if p.returncode == 0:
+            # Success: Return the stdout as part of the JSON response
+            return JsonResponse({'status': 'success', 'output': pout}, safe=False)
+        else:
+            # Failure: Return the stderr as part of the error response
+            return JsonResponse({'status': 'error', 'error': perr}, status=500)
     except Exception as e:
-        print(f'Error occured during the get_final_table: {e}')
-
+        # Catch any other exceptions and return an error response
+        print(f'Error occured during the create_final_tables: {e}')
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
     
 
-    return JsonResponse({'error': 'Get (get-final-table) request failed'}, status=405)
 
 
 
@@ -158,26 +156,69 @@ def get_enriched_words(request):
         print(tmp_f_path)
     
     try:
-        p = subprocess.Popen(
-            ['python', './coresh_backend/runner/get_enriched_words.py',
-             '--server-path-suffix', jobid,
-             '--out-json-path', tmp_f_path
-             ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True
-        )
-
-        pout, perr = p.communicate()
-        assert p.returncode == 0, perr
-        
+        subprocess.call([
+            'rsync', '-qP', 
+            f'{SERVER_USER}@{SERVER_HOST}:{OUT_PATH}/{jobid}/output/finalTable/words_enrichment.json', 
+            f'{tmp_f_path}'
+            ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
         with open(tmp_f_path) as inp_f:
             res = json.load(inp_f)
         return JsonResponse(res, safe=False)
     except Exception as e:
-        print(f'Error occured during the get_final_table: {e}')
+        print(f'Error occured during the get_enriched_words: {e}')
+        return JsonResponse({'error': 'Get (get-enriched-words) request failed'}, status=405)
+    finally:
+        if tmp_f_path and os.path.exists(tmp_f_path):
+            os.remove(tmp_f_path)
 
+
+
+def get_ranking_result(request):
+    jobid = request.GET.get('jobid')
+
+    tmp_f_path = None
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as tmp_f:
+        tmp_f_path = tmp_f.name
+        print(tmp_f_path)
+    try:
+        subprocess.call([
+            'rsync', '-qP', 
+            f'{SERVER_USER}@{SERVER_HOST}:{OUT_PATH}/{jobid}/output/finalTable/result.json', 
+            f'{tmp_f_path}'
+            ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        with open(tmp_f_path) as inp_f:
+            res = json.load(inp_f)
+        return JsonResponse(res, safe=False)
+    except Exception as e:
+        print(f'Error occured during the get_enriched_words: {e}')
+        return JsonResponse({'error': 'Get (get-ranking-result) request failed'}, status=405)
+    finally:
+        if tmp_f_path and os.path.exists(tmp_f_path):
+            os.remove(tmp_f_path)
+
+
+def check_result_files(request):
+    jobid = request.GET.get('jobid')
     
-
-    return JsonResponse({'error': 'Get (get-enriched-words) request failed'}, status=405)
+    ssh_command = [
+        'ssh', f'{SERVER_USER}@{SERVER_HOST}',
+        f'ls {OUT_PATH}/{jobid}/output/finalTable'        
+    ]
+    
+    try:
+        p = subprocess.Popen(
+            ssh_command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True
+        )
+        pout, perr = p.communicate()
+        
+        if p.returncode == 0:
+            files = pout.strip().splitlines()
+            files_ready = "result.json" in files and "words_enrichment.json" in files
+            return JsonResponse({'files_ready': files_ready})
+    except Exception as e:
+        return JsonResponse({'error': 'Get (check_result_files) request failed'}, status=405)

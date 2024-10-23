@@ -1,6 +1,10 @@
 #!/bin/bash
 
+DEFAULT_PORT=16998
+PORT=${1:-$DEFAULT_PORT}
+
 python ./coresh_backend/ext/count_files_number.py
 rsync -rP ${SERVER_USER}@${SERVER_HOST}:/${CORESH_R_PATH}/data/number_of_files.json ./coresh_backend/ext/data/
 
-# exec ./manage.py runserver 0.0.0.0:16998
+
+exec ./manage.py runserver 0.0.0.0:$PORT
